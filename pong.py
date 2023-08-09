@@ -16,6 +16,8 @@ UPGRADE = 20
 HALF_BALL_SIZE = 10
 DEFENDER_SIZE = 32
 
+BASE_SPEED = 10
+
 class VERTICAL_DIRECTION(Enum):
 	TOP = 0
 	DOWN = 1
@@ -36,12 +38,15 @@ class Orientation():
 	
 class Ball():
 	
-	def __init__(self, surfrect, ball_speed):
+	def __init__(self, surfrect, ball_speed, clock):
 		self.surfrect = surfrect
 		self.ball_rect = pygame.Rect((0, 0), (20, 20))
 		self.orientation = Orientation(VERTICAL_DIRECTION.TOP, HORIZONTAL_DIRECTION.RIGHT)
 		self.ball_rect.center = (self.surfrect.w / 2, self.surfrect.h / 2)
 		self.ball_speed = ball_speed
+		
+		self.clock = clock
+		self.game_won = 0
 		
 		
 	def draw_itself(self, surface):
@@ -70,26 +75,28 @@ class Ball():
 	def ball_reorientation(self, player_rect, bot_rect):
 		iswon = 0
 		if self.orientation.horizontal == HORIZONTAL_DIRECTION.RIGHT:
-			self.ball_rect.x += 10 * self.ball_speed
+			self.ball_rect.x += BASE_SPEED * self.ball_speed
 		elif self.orientation.horizontal == HORIZONTAL_DIRECTION.LEFT:
-			self.ball_rect.x -= 10 * self.ball_speed
+			self.ball_rect.x -= BASE_SPEED * self.ball_speed
 		if self.orientation.vertical == VERTICAL_DIRECTION.TOP:
-			self.ball_rect.y -= 10 * self.ball_speed
+			self.ball_rect.y -= BASE_SPEED * self.ball_speed
 		elif self.orientation.vertical == VERTICAL_DIRECTION.DOWN:
-			self.ball_rect.y += 10 * self.ball_speed
+			self.ball_rect.y += BASE_SPEED * self.ball_speed
 		self.revert_horizon()
 		iswon = self.revert_vertical(bot_rect, player_rect)
-		return iswon
+		self.game_won = iswon
+		#return iswon
 	
 
 
 class Player:
-	def __init__(self, player_type, center, ai_speed=1):
+	def __init__(self, player_type, center, ai_speed=1, ai_humanity=1):
 		self.player_type = player_type
 		self.rect = pygame.Rect((0, 0), (128,  32))
 		self.rect.center = center
 		self.bot_place = self.rect.w
 		self.ai_speed = ai_speed
+		self.ai_humanity = ai_humanity
 	
 	def draw_itself(self, surface):
 		surface.fill((255, 255, 255), self.rect)
@@ -100,26 +107,31 @@ class Player:
 		surface.fill((255, 255, 255), self.rect)
 
 	def bot_move(self, ball_x):
-		if self.bot_place < ball_x - (BOT_BASE_SPEED + UPGRADE * self.ai_speed):
+		
+		if self.bot_place > ball_x - ((BOT_BASE_SPEED + UPGRADE * self.ai_speed) / 2) and self.bot_place < ball_x + ((BOT_BASE_SPEED + UPGRADE * self.ai_speed) / 2):
+			humanity = random.random() % (2 * self.ai_humanity * BOT_BASE_SPEED) - ((BOT_BASE_SPEED * self.ai_humanity) / 2)
+			self.bot_place = ball_x + humanity
+		elif self.bot_place < ball_x - (BOT_BASE_SPEED + UPGRADE * self.ai_speed):
 			self.bot_place += (BOT_BASE_SPEED + UPGRADE * self.ai_speed)
 		elif self.bot_place > ball_x + (BOT_BASE_SPEED + UPGRADE * self.ai_speed):
 			self.bot_place -= (BOT_BASE_SPEED + UPGRADE * self.ai_speed)
-		else:
-			humanity = random.random() % (2 * BOT_BASE_SPEED) - BOT_BASE_SPEED
-			self.bot_place = ball_x + humanity
+		#else:
+			#humanity = random.random() % (2 * BOT_BASE_SPEED) - BOT_BASE_SPEED
+			#humanity = random.random() % (2 * self.ai_humanity) - (BOT_BASE_SPEED * self.ai_humanity)
+			#self.bot_place = ball_x + humanity
 
 
 class Pong():
 	
-	def __init__(self, ball_speed, ai_speed):
-		pygame.init()
+	def __init__(self, ball_speed, ai_speed, humanity):
+		#pygame.init()
 		# Resolution is ignored on Android
 		self.surface = pong_menu.SCREEN
 		self.clock = pygame.time.Clock()
 		self.surfrect = self.surface.get_rect()
 		self.player = Player(PLAYER_TYPE.HUMAN,  (self.surfrect.w / 2, DEFENDER_SIZE / 2))
-		self.bot = Player(PLAYER_TYPE.BOT,  (self.surfrect.w / 2, self.surfrect.h - DEFENDER_SIZE / 2), ai_speed)
-		self.ball = Ball(self.surfrect, ball_speed)
+		self.bot = Player(PLAYER_TYPE.BOT,  (self.surfrect.w / 2, self.surfrect.h - DEFENDER_SIZE / 2), ai_speed, humanity)
+		self.ball = Ball(self.surfrect, ball_speed, self.clock)
 		
 		
 	def control_loop(self):
@@ -130,28 +142,33 @@ class Pong():
 				if self.player.rect.collidepoint(ev.pos):
                 	# This is the starting point
 					pygame.mouse.get_rel()
-					return True
+					return True, False
 			elif ev.type == pygame.MOUSEBUTTONUP:
-				return False
+				return False, False
 			#elif ev.type == pygame.K_RIGHT:
 				#return True
 			#elif ev.type == pygame.K_LEFT:
 				#return True
-		return True
+			elif ev.type == pygame.K_ESCAPE or ev.type == pygame.K_AC_BACK:
+				return False, True
+		return True, False
 		
 		
 	def play(self):
 		touched = False
 		orientation = 0
 		bot_ai = Thread(target=self.bot_job)
+		ball_th = Thread(target=self.ball_job)
 		bot_ai.start()
+		ball_th.start()
 		while True:
-			touched = self.control_loop()
-			orientation = self.ball.ball_reorientation(self.player.rect, self.bot.rect)
+			touched, quit_game= self.control_loop()
+			if quit_game:
+				return 0
+			orientation = self.ball.game_won
 			self.clock.tick(60)
 			if touched:
 				self.apply_move()
-				#self.clock.tick(60)
 			self.fill_pong_table()
 			pygame.display.flip()
 			if orientation > 0:
@@ -162,6 +179,11 @@ class Pong():
 		while True:
 			self.bot.bot_move(self.ball.ball_rect.x)
 			self.apply_bot_move()
+			self.clock.tick(60)
+			
+	def ball_job(self):
+		while True:
+			self.ball.ball_reorientation(self.player.rect, self.ball.ball_rect)
 			self.clock.tick(60)
 		
 
@@ -187,38 +209,39 @@ class Pong():
 
 
 def pong_out_loop():
-	while True:
-		for ev in pygame.event.get():
-			if ev.type == QUIT:
-				pygame.quit()
-				return False
-			elif ev.type == pygame.MOUSEBUTTONDOWN:
-				return True
+	#while True:
+	for ev in pygame.event.get():
+		if ev.type == QUIT:
+			pygame.quit()
+			return False
+		elif ev.type == pygame.MOUSEBUTTONDOWN:
+			return True
+		elif ev.type == pygame.K_ESCAPE or ev.type == pygame.K_AC_BACK:
+			return False
 
 
 
-def pong_main(ball_speed, ai_speed):
+def pong_main(ball_speed, ai_speed, humanity):
 	continue_playing = True
 	while continue_playing:
-		pong_game = Pong(ball_speed, ai_speed)
+		pong_game = Pong(ball_speed, ai_speed, humanity)
 		pong_winning_menu = WinMenu(pong_game.surface)
 		lost_by = pong_game.play()
 		pong_winning_menu.draw_label_winner(lost_by)
-		pygame.display.update()
 		continue_playing = pong_out_loop()
 		
 
 # next function allows a stand alone of the pong without menu
 
 if __name__ == '__main__':
+	#pygame.init()
 	playing = True
 	while playing:
-		#pong = Pong(ball_speed, ai_speed)
-		pong = Pong(1, 2)
+		#pong = Pong(ball_speed, ai_speed, ai_humanity)
+		pong = Pong(1, 2, 1)
 		pong_menu = WinMenu(pong.surface)
 		lost = pong.play()
 		pong_menu.draw_label_winner(lost)
-		pygame.display.update()
 		playing = pong_out_loop()
 		
 
