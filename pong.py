@@ -228,6 +228,7 @@ def pong_main(ball_speed, ai_speed, humanity):
 		pong_winning_menu = WinMenu(pong_game.surface)
 		lost_by = pong_game.play()
 		pong_winning_menu.draw_label_winner(lost_by)
+		pygame.display.update()
 		continue_playing = pong_out_loop()
 		
 
@@ -242,6 +243,7 @@ if __name__ == '__main__':
 		pong_menu = WinMenu(pong.surface)
 		lost = pong.play()
 		pong_menu.draw_label_winner(lost)
+		pygame.display.update()
 		playing = pong_out_loop()
 		
 
