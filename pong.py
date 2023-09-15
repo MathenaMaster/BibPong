@@ -1,17 +1,17 @@
 import sys
 import pygame
-from pygame.locals import *
+from pygame.locals import * # for pygame key events
 from menu import WinMenu
 from enum import Enum
-import random
-
 from threading import Thread
+from returnthread import ReturnThread
+import random
 
 from pongmenu import pong_menu
 
-BOT_BASE_SPEED = 50
+BOT_BASE_SPEED = 10
 
-UPGRADE = 20
+UPGRADE = 5
 
 HALF_BALL_SIZE = 10
 DEFENDER_SIZE = 32
@@ -41,10 +41,10 @@ class Ball():
 	def __init__(self, surfrect, ball_speed, clock):
 		self.surfrect = surfrect
 		self.ball_rect = pygame.Rect((0, 0), (20, 20))
+		random_init = (random.random() * (self.surfrect.w / 2)) - (self.surfrect.w / 4)
 		self.orientation = Orientation(VERTICAL_DIRECTION.TOP, HORIZONTAL_DIRECTION.RIGHT)
-		self.ball_rect.center = (self.surfrect.w / 2, self.surfrect.h / 2)
+		self.ball_rect.center = ((self.surfrect.w / 2) + random_init, (self.surfrect.h / 2))
 		self.ball_speed = ball_speed
-		
 		self.clock = clock
 		self.game_won = 0
 		
@@ -61,13 +61,15 @@ class Ball():
 
 
 	def revert_vertical(self, bot_rect, player_rect):
-		if self.ball_rect.y <=  DEFENDER_SIZE and self.ball_rect.colliderect(player_rect):
+		player_collided = self.ball_rect.colliderect(player_rect)
+		if self.ball_rect.y <=  DEFENDER_SIZE + 1 and player_collided:
 			self.orientation.vertical = VERTICAL_DIRECTION.DOWN
-		elif self.ball_rect.y <= DEFENDER_SIZE and not self.ball_rect.colliderect(player_rect):
+		elif self.ball_rect.y <= DEFENDER_SIZE + 1 and not player_collided:
 			return 1
-		if self.ball_rect.y >= self.surfrect.h - (DEFENDER_SIZE + (2 * HALF_BALL_SIZE)) and self.ball_rect.colliderect(bot_rect):
+		bot_collided = self.ball_rect.colliderect(bot_rect)
+		if self.ball_rect.y >= (self.surfrect.h - (DEFENDER_SIZE + (2 * HALF_BALL_SIZE) + 1)) and bot_collided:
 			self.orientation.vertical = VERTICAL_DIRECTION.TOP
-		elif self.ball_rect.y >= self.surfrect.h - (DEFENDER_SIZE + (2 * HALF_BALL_SIZE)) and not self.ball_rect.colliderect(bot_rect):
+		elif self.ball_rect.y >= (self.surfrect.h - (DEFENDER_SIZE + (2 * HALF_BALL_SIZE) + 1)) and not bot_collided:
 			return 2
 		return 0
 
@@ -84,8 +86,7 @@ class Ball():
 			self.ball_rect.y += BASE_SPEED * self.ball_speed
 		self.revert_horizon()
 		iswon = self.revert_vertical(bot_rect, player_rect)
-		self.game_won = iswon
-		#return iswon
+		return iswon
 	
 
 
@@ -107,18 +108,13 @@ class Player:
 		surface.fill((255, 255, 255), self.rect)
 
 	def bot_move(self, ball_x):
-		
 		if self.bot_place > ball_x - ((BOT_BASE_SPEED + UPGRADE * self.ai_speed) / 2) and self.bot_place < ball_x + ((BOT_BASE_SPEED + UPGRADE * self.ai_speed) / 2):
-			humanity = random.random() % (2 * self.ai_humanity * BOT_BASE_SPEED) - ((BOT_BASE_SPEED * self.ai_humanity) / 2)
+			humanity = (random.random() * (2 * self.ai_humanity * BOT_BASE_SPEED)) - ((BOT_BASE_SPEED * self.ai_humanity) / 2)
 			self.bot_place = ball_x + humanity
 		elif self.bot_place < ball_x - (BOT_BASE_SPEED + UPGRADE * self.ai_speed):
 			self.bot_place += (BOT_BASE_SPEED + UPGRADE * self.ai_speed)
 		elif self.bot_place > ball_x + (BOT_BASE_SPEED + UPGRADE * self.ai_speed):
 			self.bot_place -= (BOT_BASE_SPEED + UPGRADE * self.ai_speed)
-		#else:
-			#humanity = random.random() % (2 * BOT_BASE_SPEED) - BOT_BASE_SPEED
-			#humanity = random.random() % (2 * self.ai_humanity) - (BOT_BASE_SPEED * self.ai_humanity)
-			#self.bot_place = ball_x + humanity
 
 
 class Pong():
@@ -130,7 +126,7 @@ class Pong():
 		self.clock = pygame.time.Clock()
 		self.surfrect = self.surface.get_rect()
 		self.player = Player(PLAYER_TYPE.HUMAN,  (self.surfrect.w / 2, DEFENDER_SIZE / 2))
-		self.bot = Player(PLAYER_TYPE.BOT,  (self.surfrect.w / 2, self.surfrect.h - DEFENDER_SIZE / 2), ai_speed, humanity)
+		self.bot = Player(PLAYER_TYPE.BOT,  (self.surfrect.w * random.random(), self.surfrect.h - DEFENDER_SIZE / 2), ai_speed, humanity)
 		self.ball = Ball(self.surfrect, ball_speed, self.clock)
 		
 		
@@ -138,6 +134,7 @@ class Pong():
 		for ev in pygame.event.get():
 			if ev.type == QUIT:
 				pygame.quit()
+				sys.exit()
 			elif ev.type == pygame.MOUSEBUTTONDOWN:
 				if self.player.rect.collidepoint(ev.pos):
                 	# This is the starting point
@@ -155,36 +152,47 @@ class Pong():
 		
 		
 	def play(self):
-		touched = False
 		orientation = 0
+		player_th = Thread(target=self.player_job)
 		bot_ai = Thread(target=self.bot_job)
-		ball_th = Thread(target=self.ball_job)
+		ball_th = ReturnThread(target=self.ball_job)
+		player_th.start()
 		bot_ai.start()
 		ball_th.start()
-		while True:
-			touched, quit_game= self.control_loop()
-			if quit_game:
-				return 0
-			orientation = self.ball.game_won
-			self.clock.tick(60)
-			if touched:
-				self.apply_move()
+		while orientation == 0:
 			self.fill_pong_table()
-			pygame.display.flip()
+			#pygame.display.flip()
+			pygame.display.update()
+			if not ball_th.is_alive():
+				orientation = ball_th.join()
 			if orientation > 0:
+				self.ball.game_won = orientation # to do before both join to end their loop
+				bot_ai.join()
+				player_th.join()
 				return orientation
 		return orientation
+		
+	def player_job(self):
+		while self.ball.game_won == 0:
+			touched, quit_game = self.control_loop()
+			if quit_game:
+				return 
+			if touched:
+				self.apply_move()
+			self.clock.tick(60)
 				
 	def bot_job(self):
-		while True:
+		while self.ball.game_won == 0:
 			self.bot.bot_move(self.ball.ball_rect.x)
 			self.apply_bot_move()
 			self.clock.tick(60)
 			
 	def ball_job(self):
-		while True:
-			self.ball.ball_reorientation(self.player.rect, self.ball.ball_rect)
+		reorientation = 0
+		while reorientation == 0:
+			reorientation = self.ball.ball_reorientation(self.player.rect, self.bot.rect)
 			self.clock.tick(60)
+		return reorientation
 		
 
 	def fill_pong_table(self):
@@ -202,8 +210,7 @@ class Pong():
 
 
 	def apply_bot_move(self):
-		self.bot.rect.move_ip((self.bot.bot_place, 0))
-		self.bot.rect.top = self.surfrect.h
+		self.bot.rect.move_ip((self.bot.bot_place, self.surfrect.h - DEFENDER_SIZE))
 		self.bot.rect.clamp_ip(self.surfrect)
 
 
@@ -213,7 +220,8 @@ def pong_out_loop():
 	for ev in pygame.event.get():
 		if ev.type == QUIT:
 			pygame.quit()
-			return False
+			sys.exit()
+			#return False
 		elif ev.type == pygame.MOUSEBUTTONDOWN:
 			return True
 		elif ev.type == pygame.K_ESCAPE or ev.type == pygame.K_AC_BACK:
@@ -225,26 +233,28 @@ def pong_main(ball_speed, ai_speed, humanity):
 	continue_playing = True
 	while continue_playing:
 		pong_game = Pong(ball_speed, ai_speed, humanity)
-		pong_winning_menu = WinMenu(pong_game.surface)
 		lost_by = pong_game.play()
+		pong_winning_menu = WinMenu(pong_game.surface)
 		pong_winning_menu.draw_label_winner(lost_by)
 		pygame.display.update()
+		#pygame.display.flip()
 		continue_playing = pong_out_loop()
 		
 
 # next function allows a stand alone of the pong without menu
 
 if __name__ == '__main__':
-	#pygame.init()
 	playing = True
 	while playing:
 		#pong = Pong(ball_speed, ai_speed, ai_humanity)
 		pong = Pong(1, 2, 1)
-		pong_menu = WinMenu(pong.surface)
 		lost = pong.play()
+		pong_menu = WinMenu(pong.surface)
 		pong_menu.draw_label_winner(lost)
 		pygame.display.update()
+		#pygame.display.flip()
 		playing = pong_out_loop()
+		
 		
 
 

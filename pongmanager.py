@@ -40,6 +40,7 @@ def play():
 		#pong_menu.menu_events(PLAY_MOUSE_POS, play_events, [PLAY_BACK, LAUNCH_GAME])
 			
 		pygame.display.update()
+		#pygame.display.flip()
 	
 	
 def play_events(event, mouse_pos, buttons):
@@ -91,6 +92,7 @@ def options():
 			return
 			
 		pygame.display.update()
+		#pygame.display.flip()
 
 
 def options_events(event, mouse_pos, buttons):
@@ -152,6 +154,7 @@ def main_menu():
 		pong_menu.menu_events(MENU_MOUSE_POS, do_menu_events, [PLAY_BUTTON, OPTIONS_BUTTON, QUIT_BUTTON])
 		
 		pygame.display.update()
+		#pygame.display.flip()
 	
 	
 	
