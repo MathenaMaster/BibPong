@@ -3,7 +3,7 @@ import pygame
 from pygame.locals import * # for pygame key events
 from menu import WinMenu
 from enum import Enum
-from threading import Thread
+from threading import Thread, Lock
 from returnthread import ReturnThread
 import random
 
@@ -46,8 +46,19 @@ class Ball():
 		self.ball_rect.center = ((self.surfrect.w / 2) + random_init, (self.surfrect.h / 2))
 		self.ball_speed = ball_speed
 		self.clock = clock
-		self.game_won = 0
+		self.__game_won = 0
+		self.__win_lock = Lock()
 		
+	@property
+	def game_won(self):
+		with self.__win_lock:
+			won = self.__game_won
+		return won
+	
+	@game_won.setter
+	def game_won(self, won):
+		with self.__win_lock:
+			self.__game_won = won
 		
 	def draw_itself(self, surface):
 		surface.fill((255, 255, 255), self.ball_rect)
@@ -109,7 +120,7 @@ class Player:
 
 	def bot_move(self, ball_x):
 		if self.bot_place > ball_x - ((BOT_BASE_SPEED + UPGRADE * self.ai_speed) / 2) and self.bot_place < ball_x + ((BOT_BASE_SPEED + UPGRADE * self.ai_speed) / 2):
-			humanity = (random.random() * (2 * self.ai_humanity * BOT_BASE_SPEED)) - ((BOT_BASE_SPEED * self.ai_humanity) / 2)
+			humanity = (random.random() * (self.ai_humanity * BOT_BASE_SPEED)) #- ((BOT_BASE_SPEED * self.ai_humanity) / 2)
 			self.bot_place = ball_x + humanity
 		elif self.bot_place < ball_x - (BOT_BASE_SPEED + UPGRADE * self.ai_speed):
 			self.bot_place += (BOT_BASE_SPEED + UPGRADE * self.ai_speed)

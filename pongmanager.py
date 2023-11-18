@@ -47,7 +47,7 @@ def play_events(event, mouse_pos, buttons):
 	if event.type == pygame.QUIT:
 		pygame.quit()
 		sys.exit()
-	if event.type == pygame.MOUSEBUTTONDOWN:
+	if event.type == pygame.MOUSEBUTTONUP:
 		if buttons[0].checkForInput(mouse_pos):
 			return True
 		if buttons[1].checkForInput(mouse_pos):
@@ -99,7 +99,7 @@ def options_events(event, mouse_pos, buttons):
 	if event.type == pygame.QUIT:
 		pygame.quit()
 		sys.exit()
-	if event.type == pygame.MOUSEBUTTONDOWN:
+	if event.type == pygame.MOUSEBUTTONUP:
 		if buttons[0].checkForInput(mouse_pos):
 			return True
 		if buttons[1].checkForInput(mouse_pos):
@@ -127,7 +127,7 @@ def do_menu_events(event, mouse_pos,buttons):
 	if event.type == pygame.QUIT:
 		pygame.quit()
 		sys.exit()
-	if event.type == pygame.MOUSEBUTTONDOWN:
+	if event.type == pygame.MOUSEBUTTONUP:
 		if buttons[0].checkForInput(mouse_pos):
 			play()
 		if buttons[1].checkForInput(mouse_pos):

@@ -4,14 +4,14 @@ from button import Button
 
 
 window_height = 720
-window_width = 1280
+window_width = 900
 
 
 class PongMenu:
 
 	def __init__(self):
 		pygame.init()
-		self.SCREEN = pygame.display.set_mode((window_width, window_height))
+		self.SCREEN = pygame.display.set_mode((window_height, window_width))
 		pygame.display.set_caption("Pong Menu")
 		
 		self.BG = pygame.Color("black")

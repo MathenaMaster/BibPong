@@ -19,4 +19,3 @@ class ReturnThread(Thread):
 	def join(self, timeout=None):
 		super(ReturnThread, self).join(timeout)
 		return self.__result
-
