@@ -16,8 +16,8 @@ class WinMenu():
 			pong_menu.make_label((window_height / 2, 200), "Bot won", "white", 100)
 		if lost == 2:
 			pong_menu.make_label((window_height / 2, 200), "Player won", "white", 100)
-		#pygame.display.flip()
-		pygame.display.update()
+		pygame.display.flip()
+		#pygame.display.update()
 		
 		time.sleep(3)
 		

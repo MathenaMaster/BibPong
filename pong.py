@@ -9,7 +9,7 @@ import random
 
 from pongmenu import pong_menu
 
-BOT_BASE_SPEED = 10
+BOT_BASE_SPEED = 30
 
 UPGRADE = 5
 
@@ -65,22 +65,23 @@ class Ball():
 
 	
 	def revert_horizon(self):
-		if self.ball_rect.x <= (HALF_BALL_SIZE + DEFENDER_SIZE):
+		if self.ball_rect.x <= 0:
 			self.orientation.horizontal = HORIZONTAL_DIRECTION.RIGHT
-		elif self.ball_rect.x >= self.surfrect.w - (HALF_BALL_SIZE + DEFENDER_SIZE):
+		elif self.ball_rect.x >= self.surfrect.w - (2 * HALF_BALL_SIZE):
 			self.orientation.horizontal = HORIZONTAL_DIRECTION.LEFT
 
 
 	def revert_vertical(self, bot_rect, player_rect):
 		player_collided = self.ball_rect.colliderect(player_rect)
-		if self.ball_rect.y <=  DEFENDER_SIZE + 1 and player_collided:
+		#bot_collided = self.ball_rect.colliderect(bot_rect)
+		if self.ball_rect.y <=  DEFENDER_SIZE and player_collided:
 			self.orientation.vertical = VERTICAL_DIRECTION.DOWN
-		elif self.ball_rect.y <= DEFENDER_SIZE + 1 and not player_collided:
+		elif self.ball_rect.y <= DEFENDER_SIZE and not player_collided:
 			return 1
 		bot_collided = self.ball_rect.colliderect(bot_rect)
-		if self.ball_rect.y >= (self.surfrect.h - (DEFENDER_SIZE + (2 * HALF_BALL_SIZE) + 1)) and bot_collided:
+		if self.ball_rect.y > (self.surfrect.h - (DEFENDER_SIZE + (2 * HALF_BALL_SIZE)) - 1) and bot_collided:
 			self.orientation.vertical = VERTICAL_DIRECTION.TOP
-		elif self.ball_rect.y >= (self.surfrect.h - (DEFENDER_SIZE + (2 * HALF_BALL_SIZE) + 1)) and not bot_collided:
+		elif self.ball_rect.y > (self.surfrect.h - (DEFENDER_SIZE + (2 * HALF_BALL_SIZE))) and not bot_collided:
 			return 2
 		return 0
 
@@ -120,7 +121,7 @@ class Player:
 
 	def bot_move(self, ball_x):
 		if self.bot_place > ball_x - ((BOT_BASE_SPEED + UPGRADE * self.ai_speed) / 2) and self.bot_place < ball_x + ((BOT_BASE_SPEED + UPGRADE * self.ai_speed) / 2):
-			humanity = (random.random() * (self.ai_humanity * BOT_BASE_SPEED)) #- ((BOT_BASE_SPEED * self.ai_humanity) / 2)
+			humanity = (((random.random() * 2) - 1) * (self.ai_humanity * BOT_BASE_SPEED)) #- ((BOT_BASE_SPEED * self.ai_humanity) / 2)
 			self.bot_place = ball_x + humanity
 		elif self.bot_place < ball_x - (BOT_BASE_SPEED + UPGRADE * self.ai_speed):
 			self.bot_place += (BOT_BASE_SPEED + UPGRADE * self.ai_speed)
@@ -247,8 +248,8 @@ def pong_main(ball_speed, ai_speed, humanity):
 		lost_by = pong_game.play()
 		pong_winning_menu = WinMenu(pong_game.surface)
 		pong_winning_menu.draw_label_winner(lost_by)
-		pygame.display.update()
-		#pygame.display.flip()
+		#pygame.display.update()
+		pygame.display.flip()
 		continue_playing = pong_out_loop()
 		
 
@@ -258,12 +259,12 @@ if __name__ == '__main__':
 	playing = True
 	while playing:
 		#pong = Pong(ball_speed, ai_speed, ai_humanity)
-		pong = Pong(1, 2, 1)
+		pong = Pong(1, 2, 0)
 		lost = pong.play()
 		pong_menu = WinMenu(pong.surface)
 		pong_menu.draw_label_winner(lost)
-		pygame.display.update()
-		#pygame.display.flip()
+		#pygame.display.update()
+		pygame.display.flip()
 		playing = pong_out_loop()
 		
 		

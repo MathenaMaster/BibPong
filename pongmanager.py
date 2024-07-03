@@ -5,14 +5,14 @@ from pongmenu import pong_menu, window_height
 
 from pong import pong_main
 
-MIN_HUMANITY_LEVEL = 1
+MIN_HUMANITY_LEVEL = 0
 MIN_LEVEL = 1
 MAX_LEVEL = 5
 
 
 ball_speed = 1
 ai_speed = 2
-ai_humanity = 1
+ai_humanity = 0
 
 this = sys.modules[__name__]
 
@@ -41,18 +41,27 @@ def play():
 			
 		pygame.display.update()
 		#pygame.display.flip()
-	
+		
+def call_play():
+	pong_main(this.ball_speed, this.ai_speed, this.ai_humanity)
+
+def full_click_play(mouse_pos, button):
+	for event in pygame.event.get():
+		if event.type == pygame.MOUSEBUTTONUP:
+			if button.checkForInput(mouse_pos):
+				call_play()
+
 	
 def play_events(event, mouse_pos, buttons):
 	if event.type == pygame.QUIT:
 		pygame.quit()
 		sys.exit()
-	if event.type == pygame.MOUSEBUTTONUP:
+	if event.type == pygame.MOUSEBUTTONDOWN:
 		if buttons[0].checkForInput(mouse_pos):
 			return True
 		if buttons[1].checkForInput(mouse_pos):
 			pong_main(this.ball_speed, this.ai_speed, this.ai_humanity)
-			#return True #attention
+			#full_click_play(mouse_pos, buttons[1])
 	return False
 	
 	
@@ -122,19 +131,30 @@ def options_events(event, mouse_pos, buttons):
 				this.ai_humanity += 1
 	return False
 
+def full_click_option(mouse_pos, buttons):
+	for event in pygame.event.get():
+		if event.type == pygame.MOUSEBUTTONUP:
+			if buttons[0].checkForInput(mouse_pos):
+				play()
+			if buttons[1].checkForInput(mouse_pos):
+				options()
+			if buttons[2].checkForInput(mouse_pos):
+				pygame.quit()
+				sys.exit()
 
 def do_menu_events(event, mouse_pos,buttons):
 	if event.type == pygame.QUIT:
 		pygame.quit()
 		sys.exit()
-	if event.type == pygame.MOUSEBUTTONUP:
+	if event.type == pygame.MOUSEBUTTONDOWN:
+		#full_click_option(mouse_pos, buttons)
 		if buttons[0].checkForInput(mouse_pos):
 			play()
 		if buttons[1].checkForInput(mouse_pos):
 			options()
 		if buttons[2].checkForInput(mouse_pos):
 			pygame.quit()
-			sys.exit()
+			sys.exit(0)
 	return False
 
 
